@@ -1,0 +1,26 @@
+# Dependencies
+markdown:            redcarpet
+highlighter:         pygments
+
+# Permalinks
+#
+# Use of `relative_permalinks` ensures post links from the index work properly.
+permalink:           pretty
+relative_permalinks: true
+
+# Setup
+title:               Joe Burgess
+tagline:             "Im not an expert"
+description:         'I teach at The Flatiron School.'
+url:                 http://joemburgess.com
+baseurl:             /
+paginate:            5
+
+# About/contact
+author:
+  name:              Joe Burgess
+  url:               https://twitter.com/jmburges
+  email:             joemburgess@gmail.com
+
+# Custom vars
+version:             1.0.0

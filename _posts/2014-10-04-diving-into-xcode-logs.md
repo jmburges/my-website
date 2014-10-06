@@ -7,9 +7,9 @@ At the Flatiron School we have been building a tool to collect the results from 
 
 ## How It Works
 
-Each lab has a Test Post-Action and a test runner shell script. The Test Post Action gets the Derived Data Path (`$BUILD_DIR`) and replace the build directory with a test path. Then the post-action passes that log Derived Data Directory and the location of source of the project (`$SRCROOT`). I need this locations so I can get git details to push up to our server. Then the test runner ungunzips the `.xcactivitylog`, extracts out just the testing output and send it to `xcpretty`. We then have a reporter written for xcpretty that formats everything into a JSON hash and send a `POST` request to our server
+Each lab has a Test Post-Action and a test runner shell script. The Test Post Action gets the Derived Data Path (`$BUILD_DIR`) and goes into the Test Logs folder. Then the post-action passes that log Derived Data Directory and the location of source of the project (`$SRCROOT`) to a shell script. Then the test runner shell script ungunzips the `.xcactivitylog`, extracts out just the testing output and send it to `xcpretty`. We then have a reporter written for xcpretty that formats everything into a JSON hash and send a `POST` request to our server.
 
-## How We Go There
+## How We Got There
 
 ### XCPretty
 
@@ -35,11 +35,11 @@ So now I was able to get test results if students ran the tests in the command l
 xcodebuild -workspace yourworkspace.xcworkspace/ -scheme yourscheme test -sdk iphonesimulator8.0 | xcpretty -t --report flatiron
 ```
 
-This was neither ideal nor really how iOS developers work. Command line test running is really a feature to be used for Continuous Integration, not day-to-day tests. Also I wanted as close as possible to perfect data collection. In iOS development, that meant retreiving the test results from when we type `CMD-u`. My first thought was to just have the tests get re-run using a test post-action...but that ended poorly because it made tests take forever and the simulator had to come up twice. Thankfully I remembered the log viewer window in XCode. If you click on the `Logs` tab and hit the hamburger like icon on the far right of each line you get a text output. Hark! A log file. Even better it looks identical to the `xcodebuild` output. This text must exist somewhere. A quick spotlight search didn't turn anything up. I then did a search using `find` and couldn't find anything. Finally I just went to my Derived Data folder to see what's there.
+This was neither ideal nor really how iOS developers work. Command line test running is really a feature to be used for Continuous Integration, not day-to-day tests. Also I wanted as close as possible to perfect data collection. In iOS development, that meant retrieving the test results from when we type `CMD-u`. My first thought was to just have the tests get re-run using a test post-action...but that ended poorly because it made tests take forever and the simulator had to come up twice. Thankfully I remembered the log viewer window in XCode. If you click on the `Logs` tab and hit the hamburger like icon on the far right of each line you get a text output. Hark! A log file. Even better it looks identical to the `xcodebuild` output which `xcpretty` could parse. This text must exist somewhere. A quick spotlight search didn't turn anything up. I then did a search using `find` and couldn't find anything. Finally I just went to my Derived Data folder to see what's there.
 
 ### Derived Data
 
-The derived data folder is where all of the by-products of compilation goes. It's located in `~/Library/Developer/Xcode/DerivedData` and contains a TON of folders. Once you go into one of you app-specific folders there is a sub folder called `Logs/Test` which contains a bunch of (seemingly randomly named) `.xcactivitylog` files. Opened them up in vim and noticed it was a binary file. Thanks Apple. Thanks to [this](http://stackoverflow.com/questions/13861658/is-it-possible-to-search-though-all-xcodes-logs) StackOverflow article I discovered these were just `gz` archives. Un-gunzipped them and **there was the log file**. Annoyingly it used windows style returns for some reason but that's ok. Next up was figuring out this log file.
+The Derived Data folder is where all of the by-products of compilation goes. It's located in `~/Library/Developer/Xcode/DerivedData` and contains a TON of folders. Once you go into one of you app-specific folders there is a sub folder called `Logs/Test` which contains a bunch of (seemingly randomly named) `.xcactivitylog` files. Opened them up in vim and noticed it was a binary file. Thanks Apple. Thanks to [this](http://stackoverflow.com/questions/13861658/is-it-possible-to-search-though-all-xcodes-logs) StackOverflow article I discovered these were just `gz` archives. Un-gunzipped them and **there was the log file**. Annoyingly it used windows style returns for some reason but that's ok. Next up was figuring out this log file.
 
 ### The xcactivitylog
 

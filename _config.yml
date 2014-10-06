@@ -13,7 +13,7 @@ title:               Joe Burgess
 tagline:             "Im not an expert"
 description:         'I teach at The Flatiron School.'
 url:                 http://joemburgess.com
-baseurl:             /
+baseurl:             /my-website/
 paginate:            5
 
 # About/contact

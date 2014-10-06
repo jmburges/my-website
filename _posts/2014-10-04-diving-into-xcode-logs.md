@@ -5,7 +5,13 @@ title: Diving Into Xcode Logs
 
 At the Flatiron School we have been building a tool to collect the results from unit/integration tests that are included with our labs. The end goal of all of this was to have a `POST` request sent with the JSON formatted results of the tests. Having this data is mostly just to see where students are right now, but down the road will lead to some great stuff. I'm excited. But! to get access to the students test results in Objective-C was not simple. Here is the saga of how we do it.
 
-## XCPretty
+## How It Works
+
+Each lab has a Test Post-Action and a test runner shell script. The Test Post Action gets the Derived Data Path (`$BUILD_DIR`) and replace the build directory with a test path. Then the post-action passes that log Derived Data Directory and the location of source of the project (`$SRCROOT`). I need this locations so I can get git details to push up to our server. Then the test runner ungunzips the `.xcactivitylog`, extracts out just the testing output and send it to `xcpretty`. We then have a reporter written for xcpretty that formats everything into a JSON hash and send a `POST` request to our server
+
+## How We Go There
+
+### XCPretty
 
 There have been two tools to allow command line running of tests with some sort of formatting attached to it. The first that came out of facebook was [xctool](https://github.com/facebook/xctool/). It was pretty great but it was a complete replacement for `xcodebuild`. I didn't really want that. I wanted a tool that could just take the output of `xcodebuild` and bring it into ruby so that I could format it. Thankfully! [xcpretty](https://github.com/supermarin/xcpretty) exists. It's specifically made to just parse out the results of `xcodebuild`. Even better...it has a reporters functionality that allows you to format the results in different formats. Taking a look at the formatter for the [junit](https://github.com/supermarin/xcpretty/blob/master/lib/xcpretty/reporters/junit.rb) I noticed methods like this
 
@@ -21,7 +27,7 @@ end
 
 That looked perfect. There is a huge [list of events](https://github.com/supermarin/xcpretty/blob/master/lib/xcpretty/parser.rb#L210-278) that the xcpretty parser will listen to. This allowed me to get access to any event going on in an `xcodebuild` without having to write all of the [annoying regex](https://github.com/supermarin/xcpretty/blob/master/lib/xcpretty/parser.rb#L5-L187) that I was convinced I was going to have to write, it was seriously perfect. So I wrote a custom reporter that borrowed heavily from the JUnit parser. All it cared about was: start of tests, passing test, failing test, pending test and on finishing tests it serialized the hash into JSON and submitted a POST request to our server. We also included a bit of meta-data on the repository that was currently being run. This included things like github name and github user id (stored in a `.netrc` file) and using the [Git](https://github.com/schacon/ruby-git) gem to understand which lab they are working on. 
 
-## From Command Line to XCode
+### From Command Line to XCode
 
 So now I was able to get test results if students ran the tests in the command line with a very annoying command like this:
 
@@ -31,11 +37,11 @@ xcodebuild -workspace yourworkspace.xcworkspace/ -scheme yourscheme test -sdk ip
 
 This was neither ideal nor really how iOS developers work. Command line test running is really a feature to be used for Continuous Integration, not day-to-day tests. Also I wanted as close as possible to perfect data collection. In iOS development, that meant retreiving the test results from when we type `CMD-u`. My first thought was to just have the tests get re-run using a test post-action...but that ended poorly because it made tests take forever and the simulator had to come up twice. Thankfully I remembered the log viewer window in XCode. If you click on the `Logs` tab and hit the hamburger like icon on the far right of each line you get a text output. Hark! A log file. Even better it looks identical to the `xcodebuild` output. This text must exist somewhere. A quick spotlight search didn't turn anything up. I then did a search using `find` and couldn't find anything. Finally I just went to my Derived Data folder to see what's there.
 
-## Derived Data
+### Derived Data
 
 The derived data folder is where all of the by-products of compilation goes. It's located in `~/Library/Developer/Xcode/DerivedData` and contains a TON of folders. Once you go into one of you app-specific folders there is a sub folder called `Logs/Test` which contains a bunch of (seemingly randomly named) `.xcactivitylog` files. Opened them up in vim and noticed it was a binary file. Thanks Apple. Thanks to [this](http://stackoverflow.com/questions/13861658/is-it-possible-to-search-though-all-xcodes-logs) StackOverflow article I discovered these were just `gz` archives. Un-gunzipped them and **there was the log file**. Annoyingly it used windows style returns for some reason but that's ok. Next up was figuring out this log file.
 
-## The xcactivitylog
+### The xcactivitylog
 
 This log file had *a ton* of junk in it. Things like this:
 
@@ -95,8 +101,8 @@ Test Suite 'PersonSpec' passed at 2014-09-30 18:05:52 +0000.
 Test Suite 'ObjectOrientedPeopleTests.xctest' passed at 2014-09-30 18:05:52 +0000.
 ```
 
-## Parsing the logs after test running
-t
+### Parsing the logs after test running
+
 I now had the log file, I just needed to in an automated way send it to xcpretty. Annoyingly there are a lot of steps. I wrote a script that we add to each assignment that does roughly this:
 
   1) cd to the derived data directory (passed in from test post-action)
@@ -107,6 +113,6 @@ I now had the log file, I just needed to in an automated way send it to xcpretty
 
 Major top tip when working with Post-Actions. The `stdout` and `stderr` get sent to `/dev/null` by default so we can't see if anything goes wrong. This is annoying. Thankfully we can use exec to get the log output. When I am debugging the post-action I put this line as the first line in the post-action run `exec > /tmp/my_log_file.txt 2>&1`. This spits all output to `/tmp/my_log_file.txt`.
 
-## Room for Improvement
+### Room for Improvement
 
 It's not perfect at all...but it works. Even more surprising it works pretty darn consistently. The biggest problem right now is understanding *which ruby* XCode decides to use to run the post-actions. On some systems its rvm, others it is the system ruby. I need to figure that out so I can reliably have students install our modified `xcpretty` gem onto the right version of gems.

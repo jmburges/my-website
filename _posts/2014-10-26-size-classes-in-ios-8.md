@@ -11,12 +11,12 @@ With the introduction of different screen sizes in iOS 8 we now lean more heavil
 
   > A size class identifies a relative amount of display space for the height and for the width. Each dimension can be either compact, for example, the height of an iPhone in landscape orientation, or regular, for example, the height or width of an iPad. Because much of the layout of an app does not need to change for any available screen size, there is an additional value, any.
 
-Going into the different Size Classes themselves is outside of the scope of this blog post but it boils down to a 2X2 grid of size classes.
+Going into the different Size Classes themselves is outside of the scope of this blog post but it boils down to a 2X2 grid of size classes. There is a [great blog post](http://carpeaqua.com/2014/06/14/thinking-in-terms-of-ios-8-size-classes/) that explains more of it as well.
 
-|           | H Regular                 | H Compact                        |
-|-----------|---------------------------|----------------------------------|
-| V Regular | iPad Portrait/Landscape   | 5.5 inch Landscape               |
-| V Compact | 3.5"/4.0"/4.7" Landscape  | 3.5", 4.0", 4.7" Portrait iPhone |
+|           | H Regular                         | H Compact                        |
+|-----------|-----------------------------------|----------------------------------|
+| V Regular | iPad Portrait/Landscape           | 5.5 inch Landscape iPhone        |
+| V Compact | 3.5", 4.0", 4.7" Landscape iPhone | 3.5", 4.0", 4.7" Portrait iPhone |
 
 Now there is not concept of "rotation", simply a change in the size classes being used. If you take a look at Interface Builder there is the size class selector at the bottom. This allows you to set different AutoLayout constraints for different size classes in IB. I really don't like setting AutoLayout constraints in AutoLayout because I find it confusing, limiting and *very* hard to teach around. Whenever I am teaching I like to go from the explicit case to the implicit case. This allows students to properly understand what is going on before the "magic" that implicit definitions bring set in. Because of this, I start my teaching of AutoLayout with code. We start very early on with creating instances `NSLayoutConstraint` and adding them to the views. There is no ambiguity on what is going on and students gain a much deeper understanding of AutoLayout then if they used Interface Builder. As I prepared for the lecture though, I was curious about how to access the current Size Class from code and to respond to rotation events in the new iOS 8 world.
 
